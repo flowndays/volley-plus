@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/readLayout"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:gravity="center_horizontal" >
+
+    <!-- 阅读界面 -->
+
+
+    <!-- 顶部状态栏：阅读进度 书名 时间|电量 -->
+
+    <include
+        android:id="@+id/readStatusBar_ref"
+        android:layout_width="fill_parent"
+        android:layout_height="15dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginBottom="1dp"
+        layout="@layout/read_statusbar" />
+
+    <com.adview.AdViewLayout
+        android:id="@+id/adview_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:visibility="gone" />
+
+</RelativeLayout>

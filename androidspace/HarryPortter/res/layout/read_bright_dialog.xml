@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 亮度调节弹出框 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent" android:layout_height="fill_parent"
+	android:gravity="left|center_vertical" android:orientation="vertical"
+	android:layout_centerInParent="true">
+
+	<CheckBox android:id="@+id/read_setup_bright_system"
+		android:layout_width="wrap_content" android:layout_height="wrap_content"
+		android:layout_marginLeft="30dp" android:text="随系统亮度改变" />
+
+	<TextView style="@style/text_white" android:layout_width="wrap_content"
+		android:layout_height="wrap_content" android:layout_marginLeft="20dp"
+		android:text="手动调整亮度：">
+	</TextView>
+
+	<SeekBar android:id="@+id/read_setup_bright_seekbar"
+		android:layout_width="fill_parent" android:layout_height="wrap_content"
+		android:layout_marginLeft="15dp" android:layout_marginRight="15dp"
+		android:max="255" android:maxHeight="10dp" android:progress="30">
+	</SeekBar>
+</LinearLayout>

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.rodrigo.harryportter"
+    android:versionCode="3"
+    android:versionName="1.2" >
+
+    <uses-sdk android:minSdkVersion="7" />
+
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <application
+            android:icon="@drawable/icon"
+            android:label="@string/app_name" >
+        <activity
+                android:name=".ui.activity.MainActivity"
+                android:label="@string/app_name"
+                android:theme="@android:style/Theme.NoTitleBar" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+                android:name=".ui.activity.BookListActivity"
+                android:screenOrientation="portrait"
+                android:theme="@android:style/Theme.NoTitleBar" />
+        <activity
+                android:name=".ui.activity.ReadActivity"
+                android:configChanges="keyboardHidden|orientation"
+                android:theme="@style/Theme.NoTitleBar.NoBackground.Fullscreen" />
+
+        <!-- AdView SDK for AdChina -->
+        <activity android:name="com.adchina.android.ads.views.AdBrowserView" />
+
+        <!-- AdView SDK for AdMob -->
+        <activity
+                android:name="com.google.ads.AdActivity"
+                android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|uiMode|screenSize|smallestScreenSize" />
+
+        <!-- AdView SDK for AdWo -->
+        <activity android:name="com.adwo.adsdk.AdwoAdBrowserActivity" />
+
+        <!-- AdView SDK for Domob -->
+        <activity
+                android:name="cn.domob.android.ads.DomobActivity"
+                android:theme="@android:style/Theme.Translucent" />
+
+        <!-- AdView SDK for tencent MobinWin -->
+        <activity android:name="com.tencent.mobwin.MobinWINBrowserActivity" />
+
+        <!-- AdView SDK for Youmi -->
+        <activity
+                android:name="net.youmi.android.AdActivity"
+                android:configChanges="keyboard|keyboardHidden|orientation" />
+
+        <!-- if use xml to layout AdViewLayout, following meta-data is essential -->
+        <meta-data
+                android:name="ADVIEW_SDK_KEY"
+                android:value="SDK2012171105084896rrb0ckrcs079u" />
+
+        <!-- 机锋的meta-data -->
+        <meta-data
+                android:name="YOUMI_CHANNEL"
+                android:value="10020" >
+        </meta-data>
+    </application>
+
+</manifest>

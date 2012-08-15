@@ -3,16 +3,16 @@ import os,os.path
 import zipfile
 
 def zip_dir(dirname,zipfilename):
-    filelist = []
+    fileList = []
     if os.path.isfile(dirname):
-        filelist.append(dirname)
+        fileList.append(dirname)
     else :
         for root, dirs, files in os.walk(dirname):
             for name in files:
-                filelist.append(os.path.join(root, name))
+                fileList.append(os.path.join(root, name))
 
     zf = zipfile.ZipFile(zipfilename, "w", zipfile.zlib.DEFLATED)
-    for tar in filelist:
+    for tar in fileList:
         arcname = tar[len(dirname):]
         #print arcname
         zf.write(tar,arcname)
@@ -34,3 +34,42 @@ def unzip_file(zipfilename, unziptodir):
             outfile = open(ext_filename, 'wb')
             outfile.write(zfobj.read(name))
             outfile.close()
+
+#!/usr/bin/env Python
+def printFile(fileName):
+# attempt to open file for reading
+    global file
+    try:
+        file = open(fileName, 'r')
+    except IOError, e:
+        print "*** file open error:", e
+
+# display contents to the screen
+    for eachLine in file:
+        print eachLine,
+    file.close()
+
+def readFile(fileName):
+# attempt to open file for reading
+    gap = os.linesep
+    global file
+    try:
+        file = open(fileName, 'r')
+    except IOError, e:
+        print "*** file open error:", e
+
+    # display contents to the screen
+    all = ''
+    for eachLine in file:
+        all += eachLine
+        all += gap
+    file.close()
+    return all
+
+def writeToFile(str, fileName):
+    if os.path.exists(fileName):
+        print "ERROR: '%s' already exists" % fileName
+
+    file = open(fileName, "w")
+    file.write(str)
+    file.close()
