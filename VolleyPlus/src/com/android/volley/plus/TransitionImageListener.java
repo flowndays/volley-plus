@@ -10,6 +10,8 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
 
 /**
+ * A transition listener, when the image is downloaded, show a transition animation, instead of show it directly. To improve user experience.
+ * An object pool used to sustain memory use. If the listener will not be used anymore, recycle() should be called.
  * Created with IntelliJ IDEA.
  * Author: Rodrigo
  * Date: 13-11-1
