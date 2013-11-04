@@ -21,3 +21,13 @@ Changes from trunk of volley:
 
 Todo:
 1 Change class "ImageCache", to provide some methods to set items in cache to be permanent or not.
+
+
+example to use ImageLoader:
+
+        mQueue = Volley.newRequestQueue(context);
+        ImageCache.ImageCacheParams cacheParams = new ImageCache.ImageCacheParams(context, FileManager.CACHE_IMAGE_PATH_NEW);
+        cacheParams.setMemCacheSizePercent(context, 0.2f);
+        imageCache = new ImageCache(cacheParams);
+        mImageLoader = new ImageLoader(mQueue, imageCache);
+        
