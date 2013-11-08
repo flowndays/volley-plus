@@ -41,4 +41,13 @@ Example to use ImageLoader:
         ImageView imageView = ...;
         mImageLoader.get(url, ImageWorkerManager.getDefaultListener(imageView), width, height);
        
+       //Example to use RequestPro:
        
+       HashMap<String, String> params = new HashMap<String, String>();
+        params.put(DownloadParams.RANK_ID, Integer.toString(type));
+        params.put(DownloadParams.BOOK_SEARCH_PAGE, Integer.toString(page));
+        params.put(DownloadParams.BOOK_SEARCH_COUNT, Integer.toString(Constants.PAGE_SIZE));
+        params.put(DownloadParams.UUID_PARAM_ANDROIDID, Constants.getUuid());
+        BookListRequest request = new BookListRequest(Request.Method.POST, DownloadParams.BOOK_LIST_URL, params, responseListener, errorListener);
+        mQueue.add(request);
+        mQueue.start();
