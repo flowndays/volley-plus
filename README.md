@@ -19,15 +19,26 @@ Changes from trunk of volley:
 3 TransitionImageListener provides a more comfortable transition animation than the original one, which shows the image directly.
   To sustain memory, TransitionImageListeners are kept in a pool.
 
-Todo:
-1 Change class "ImageCache", to provide some methods to set items in cache to be permanent or not.
+4 Change class "ImageCache", to provide some methods to set items in cache to be persistent or brittle(normal state).
 
+5 Provide a more developer-friendly RequestPro base class to extend. RequestPro's doc:
+ * Extended from the default Request provided by volley source with difference as follows:
+ * 1    Default successListener.
+ * 2    Unified interface for get or post request. Both can add params as a constructor param. As for get, extra params will be appended to the original url.
+ * 3    Params is also crucial when generating a cache key, to evade improper cache when requests differ only from params.
+ * 4    The method getEncodedParameters can be used by sub classes.
+see Example to use RequestPro for detail.
 
-example to use ImageLoader:
+Example to use ImageLoader:
 
         mQueue = Volley.newRequestQueue(context);
         ImageCache.ImageCacheParams cacheParams = new ImageCache.ImageCacheParams(context, FileManager.CACHE_IMAGE_PATH_NEW);
         cacheParams.setMemCacheSizePercent(context, 0.2f);
         imageCache = new ImageCache(cacheParams);
         mImageLoader = new ImageLoader(mQueue, imageCache);
-        
+        ......
+        String url = "http://www.google.com/...";
+        ImageView imageView = ...;
+        mImageLoader.get(url, ImageWorkerManager.getDefaultListener(imageView), width, height);
+       
+       
