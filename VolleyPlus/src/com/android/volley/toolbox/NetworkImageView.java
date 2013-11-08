@@ -71,10 +71,10 @@ public class NetworkImageView extends ImageView {
     /**
      * Sets URL of the image that should be loaded into this view. Note that calling this will
      * immediately either set the cached image (if available) or the default image specified by
-     * {@link NetworkImageView#setDefaultImageResId(int)} on the view.
+     * {@link com.android.volley.toolbox.NetworkImageView#setDefaultImageResId(int)} on the view.
      * <p/>
-     * NOTE: If applicable, {@link NetworkImageView#setDefaultImageResId(int)} and
-     * {@link NetworkImageView#setErrorImageResId(int)} should be called prior to calling
+     * NOTE: If applicable, {@link com.android.volley.toolbox.NetworkImageView#setDefaultImageResId(int)} and
+     * {@link com.android.volley.toolbox.NetworkImageView#setErrorImageResId(int)} should be called prior to calling
      * this function.
      *
      * @param url         The URL that should be loaded into this ImageView.

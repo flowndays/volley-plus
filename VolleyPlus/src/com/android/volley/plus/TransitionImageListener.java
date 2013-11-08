@@ -87,13 +87,13 @@ public class TransitionImageListener implements ImageLoader.ImageListener {
     @Override
     public void onResponse(ImageLoader.ImageContainer response, boolean isImmediate) {
         if (response.getBitmap() != null) {
-            setBitmap(response.getBitmap());
+            transitBitmap(response.getBitmap());
         } else if (defaultImageResId != 0) {
             view.setImageResource(defaultImageResId);
         }
     }
 
-    private void setBitmap(Bitmap bitmap) {
+    private void transitBitmap(Bitmap bitmap) {
         // Transition drawable with a transparent drwabale and the final bitmap
         final TransitionDrawable td =
                 new TransitionDrawable(new Drawable[]{

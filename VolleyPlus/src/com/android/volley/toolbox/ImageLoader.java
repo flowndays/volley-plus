@@ -20,6 +20,7 @@ import android.graphics.Bitmap.Config;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.ImageView;
 import com.android.volley.Request;
@@ -28,17 +29,15 @@ import com.android.volley.Response.ErrorListener;
 import com.android.volley.Response.Listener;
 import com.android.volley.VolleyError;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.HashSet;
 
 /**
  * Helper that handles loading and caching images from remote URLs.
  * <p/>
- * The simple way to use this class is to call {@link ImageLoader#get(String, ImageListener)}
+ * The simple way to use this class is to call {@link com.android.volley.toolbox.ImageLoader#get(String, ImageListener)}
  * and to pass in the default image listener provided by
- * {@link ImageLoader#getImageListener(ImageView, int, int)}. Note that all function calls to
+ * {@link com.android.volley.toolbox.ImageLoader#getImageListener(android.widget.ImageView, int, int)}. Note that all function calls to
  * this class must be made from the main thead, and all responses will be delivered to the main
  * thread as well.
  */
@@ -58,6 +57,11 @@ public class ImageLoader {
      * The cache implementation to be used as an L1 cache before calling into volley.
      */
     private final ImageCache mCache;
+
+    /**
+     * Keep bad urls to prevent continuous try.
+     */
+    private static final HashSet<String> BAD_URLS = new HashSet<String>();
 
     /**
      * HashMap of Cache keys -> BatchedImageRequest used to track in-flight requests so
@@ -95,18 +99,23 @@ public class ImageLoader {
          * called in main thread, so it should not block.
          */
         public Bitmap getBitmapFromMemCache(String key);
+
         /**
          * called in back-ground thread.
          */
         public Bitmap getBitmapFromDiskCache(String key, int width, int height);
+
         /**
          * called in main thread, so it should not block.
          */
         public void addBitmapToCache(String key, Bitmap bitmap, Bitmap.CompressFormat format);
+
         /**
          * called in back-ground thread.
          */
         public void addBitmapToMemCache(String key, Bitmap bitmap);
+
+        public String getCacheKey(String url, int maxWidth, int maxHeight);
     }
 
     /**
@@ -188,7 +197,7 @@ public class ImageLoader {
     public boolean isMemCached(String requestUrl, int maxWidth, int maxHeight) {
         throwIfNotOnMainThread();
 
-        String cacheKey = getCacheKey(requestUrl, maxWidth, maxHeight);
+        String cacheKey = mCache.getCacheKey(requestUrl, maxWidth, maxHeight);
         return mCache.getBitmapFromMemCache(cacheKey) != null;
     }
 
@@ -196,7 +205,7 @@ public class ImageLoader {
      * Returns an ImageContainer for the requested URL.
      * <p/>
      * The ImageContainer will contain either the specified default bitmap or the loaded bitmap.
-     * If the default was returned, the {@link ImageLoader} will be invoked when the
+     * If the default was returned, the {@link com.android.volley.toolbox.ImageLoader} will be invoked when the
      * request is fulfilled.
      *
      * @param requestUrl The URL of the image to be loaded.
@@ -221,10 +230,17 @@ public class ImageLoader {
      */
     public ImageContainer get(String requestUrl, ImageListener imageListener,
                               int maxWidth, int maxHeight) {
+        if (TextUtils.isEmpty(requestUrl))
+            return null;
         // only fulfill requests that were initiated from the main thread.
         throwIfNotOnMainThread();
 
-        final String cacheKey = getCacheKey(requestUrl, maxWidth, maxHeight);
+        if (BAD_URLS.contains(requestUrl)) {
+            imageListener.onErrorResponse(new VolleyError("bad url, tried, ignore this time"));
+            return null;
+        }
+
+        final String cacheKey = mCache.getCacheKey(requestUrl, maxWidth, maxHeight);
 
         // Try to look up the request in the cache of remote images.
         Bitmap cachedBitmap = mCache.getBitmapFromMemCache(cacheKey);
@@ -256,6 +272,11 @@ public class ImageLoader {
         loadFromDiskTask.execute();
 
         return imageContainer;
+    }
+
+    public void clearBadRecords() {
+        Log.d(TAG, "bad records cleared");
+        BAD_URLS.clear();
     }
 
     /**
@@ -437,7 +458,7 @@ public class ImageLoader {
                 }
                 container.mBitmap = bitmap;
 
-                Log.d(TAG, "get bitmap from disk, url:" + requestUrl);
+                Log.d(TAG, "get bitmap from disk, url:" + cacheKey);
                 container.mListener.onResponse(container, false);
             }
         }
@@ -447,10 +468,10 @@ public class ImageLoader {
             BatchedImageRequest request = mInFlightRequests.get(cacheKey);
             if (request != null) {
                 // If it is, add this request to the list of listeners.
-                Log.d(TAG, "not existed in disk, downloading, url:" + requestUrl);
+                Log.d(TAG, "not existed in disk, downloading, url:" + cacheKey);
                 request.addContainers(mContainers);
             } else {
-                Log.d(TAG, "not existed in disk, start download, url:" + requestUrl);
+                Log.d(TAG, "not existed in disk, start download, url:" + cacheKey);
                 // Check to see if a request is already in-flight.
                 request = mInFlightRequests.get(cacheKey);
                 if (request != null) {
@@ -472,6 +493,7 @@ public class ImageLoader {
                                 @Override
                                 public void onErrorResponse(VolleyError error) {
                                     onGetImageError(cacheKey, error);
+                                    BAD_URLS.add(requestUrl);
                                 }
                             }
                             );
@@ -617,35 +639,6 @@ public class ImageLoader {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             throw new IllegalStateException("ImageLoader must be invoked from the main thread.");
         }
-    }
-
-    /**
-     * Creates a cache key for use with the L1 cache.
-     *
-     * @param url       The URL of the request.
-     * @param maxWidth  The max-width of the output.
-     * @param maxHeight The max-height of the output.
-     */
-    private static String getCacheKey(String url, int maxWidth, int maxHeight) {
-        url = hashKeyForDisk(url);
-        return new StringBuilder(url.length() + 12).append(url).append("#W").append(maxWidth)
-                .append("#H").append(maxHeight).toString();
-    }
-
-    /**
-     * A hashing method that changes a string (like a URL) into a hash suitable for using as a
-     * disk filename.
-     */
-    public static String hashKeyForDisk(String key) {
-        String cacheKey;
-        try {
-            final MessageDigest mDigest = MessageDigest.getInstance("MD5");
-            mDigest.update(key.getBytes());
-            cacheKey = bytesToHexString(mDigest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            cacheKey = String.valueOf(key.hashCode());
-        }
-        return cacheKey;
     }
 
     private static String bytesToHexString(byte[] bytes) {

@@ -74,7 +74,7 @@ import java.util.concurrent.*;
  * Callers should handle other problems by catching {@code IOException} and
  * responding appropriately.
  */
-public final class DiskLruCache implements Closeable {
+public final class DiskLruCache implements Closeable, PersistentCache {
     static final String JOURNAL_FILE = "journal";
     static final String JOURNAL_FILE_TMP = "journal.tmp";
     static final String MAGIC = "libcore.io.DiskLruCache";
@@ -84,6 +84,7 @@ public final class DiskLruCache implements Closeable {
     private static final String DIRTY = "DIRTY";
     private static final String REMOVE = "REMOVE";
     private static final String READ = "READ";
+    private static final String PERSISTENT = "PERSISTENT";
 
     private static final Charset UTF_8 = Charset.forName("UTF-8");
     private static final int IO_BUFFER_SIZE = 8 * 1024;
@@ -366,11 +367,17 @@ public final class DiskLruCache implements Closeable {
         if (parts[0].equals(CLEAN) && parts.length == 2 + valueCount) {
             entry.readable = true;
             entry.currentEditor = null;
+            entry.persistent = false;
             entry.setLengths(copyOfRange(parts, 2, parts.length));
         } else if (parts[0].equals(DIRTY) && parts.length == 2) {
             entry.currentEditor = new Editor(entry);
         } else if (parts[0].equals(READ) && parts.length == 2) {
             // this work was already done by calling lruEntries.get()
+        } else if (parts[0].equals(PERSISTENT) && parts.length == 2 + valueCount) {
+            entry.readable = true;
+            entry.currentEditor = null;
+            entry.persistent = true;
+            entry.setLengths(copyOfRange(parts, 2, parts.length));
         } else {
             throw new IOException("unexpected journal line: " + line);
         }
@@ -382,11 +389,13 @@ public final class DiskLruCache implements Closeable {
      */
     private void processJournal() throws IOException {
         deleteIfExists(journalFileTmp);
-        for (Iterator<Entry> i = lruEntries.values().iterator(); i.hasNext(); ) {
-            Entry entry = i.next();
+        for (Iterator<Entry> iterator = lruEntries.values().iterator(); iterator.hasNext(); ) {
+            Entry entry = iterator.next();
             if (entry.currentEditor == null) {
-                for (int t = 0; t < valueCount; t++) {
-                    size += entry.lengths[t];
+                if (!entry.persistent) {
+                    for (int t = 0; t < valueCount; t++) {
+                        size += entry.lengths[t];
+                    }
                 }
             } else {
                 entry.currentEditor = null;
@@ -394,7 +403,7 @@ public final class DiskLruCache implements Closeable {
                     deleteIfExists(entry.getCleanFile(t));
                     deleteIfExists(entry.getDirtyFile(t));
                 }
-                i.remove();
+                iterator.remove();
             }
         }
     }
@@ -423,7 +432,7 @@ public final class DiskLruCache implements Closeable {
             if (entry.currentEditor != null) {
                 writer.write(DIRTY + ' ' + entry.key + '\n');
             } else {
-                writer.write(CLEAN + ' ' + entry.key + entry.getLengths() + '\n');
+                writer.write(entry.persistent ? PERSISTENT : CLEAN + ' ' + entry.key + entry.getLengths() + '\n');
             }
         }
 
@@ -484,6 +493,41 @@ public final class DiskLruCache implements Closeable {
         }
 
         return new Snapshot(key, entry.sequenceNumber, ins);
+    }
+
+    @Override
+    public void setPersistent(String key) throws IOException {
+        checkNotClosed();
+        validateKey(key);
+        Entry entry = lruEntries.get(key);
+        if (entry != null && entry.readable && !entry.persistent) {
+            redundantOpCount++;
+            entry.persistent = true;
+            journalWriter.write(PERSISTENT + ' ' + entry.key + entry.getLengths() + '\n');
+            journalWriter.flush();
+            if (journalRebuildRequired()) {
+                executorService.submit(cleanupCallable);
+            }
+        }
+
+//        Log.d("rodrigo", "setPersistent:" + key);
+    }
+
+    @Override
+    public void setBrittle(String key) throws IOException {
+        checkNotClosed();
+        validateKey(key);
+        Entry entry = lruEntries.get(key);
+        if (entry != null && entry.readable && entry.persistent) {
+            redundantOpCount++;
+            entry.persistent = false;
+            journalWriter.write(CLEAN + ' ' + entry.key + entry.getLengths() + '\n');
+            journalWriter.flush();
+            if (journalRebuildRequired()) {
+                executorService.submit(cleanupCallable);
+            }
+        }
+//        Log.d("rodrigo", "setBrittle:" + key);
     }
 
     /**
@@ -567,10 +611,12 @@ public final class DiskLruCache implements Closeable {
                     if (!renameResult) {
                         Log.e(ImageCache.TAG, "failed to rename image file to: " + clean);
                     }
-                    long oldLength = entry.lengths[i];
-                    long newLength = clean.length();
-                    entry.lengths[i] = newLength;
-                    size = size - oldLength + newLength;
+                    if (!entry.persistent) {
+                        long oldLength = entry.lengths[i];
+                        long newLength = clean.length();
+                        entry.lengths[i] = newLength;
+                        size = size - oldLength + newLength;
+                    }
                 }
             } else {
                 deleteIfExists(dirty);
@@ -581,7 +627,7 @@ public final class DiskLruCache implements Closeable {
         entry.currentEditor = null;
         if (entry.readable | success) {
             entry.readable = true;
-            journalWriter.write(CLEAN + ' ' + entry.key + entry.getLengths() + '\n');
+            journalWriter.write(entry.persistent ? PERSISTENT : CLEAN + ' ' + entry.key + entry.getLengths() + '\n');
             if (success) {
                 entry.sequenceNumber = nextSequenceNumber++;
             }
@@ -615,7 +661,7 @@ public final class DiskLruCache implements Closeable {
         checkNotClosed();
         validateKey(key);
         Entry entry = lruEntries.get(key);
-        if (entry == null || entry.currentEditor != null) {
+        if (entry == null || entry.currentEditor != null || entry.persistent) {
             return false;
         }
 
@@ -682,7 +728,9 @@ public final class DiskLruCache implements Closeable {
         while (size > maxSize) {
 //            Map.Entry<String, Entry> toEvict = lruEntries.eldest();
             final Map.Entry<String, Entry> toEvict = lruEntries.entrySet().iterator().next();
+//            Log.d("rodrigo", "to remove, persistent?" + toEvict.getValue().persistent);
             remove(toEvict.getKey());
+//            Log.d("rodrigo", "after remove,size:" + size);
         }
     }
 
@@ -697,7 +745,7 @@ public final class DiskLruCache implements Closeable {
     }
 
     private void validateKey(String key) {
-        if (key.contains(" ") || key.contains("\n") || key.contains("\r")) {
+        if (key != null && (key.contains(" ") || key.contains("\n") || key.contains("\r"))) {
             throw new IllegalArgumentException(
                     "keys must not contain spaces or newlines: \"" + key + "\"");
         }
@@ -898,6 +946,8 @@ public final class DiskLruCache implements Closeable {
          * The ongoing edit or null if this entry is not being edited.
          */
         private Editor currentEditor;
+
+        private boolean persistent;
 
         /**
          * The sequence number of the most recently committed edit to this entry.

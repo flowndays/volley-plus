@@ -16,15 +16,15 @@
 
 package com.android.volley.plus;
 
-import android.annotation.TargetApi;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.os.Environment;
 import android.os.StatFs;
+import android.support.v4.util.LruCache;
+import android.text.TextUtils;
 import android.util.Log;
-import android.util.LruCache;
 import com.android.volley.toolbox.ImageLoader;
 
 import java.io.File;
@@ -37,13 +37,14 @@ import java.security.NoSuchAlgorithmException;
 /**
  * This class holds our bitmap caches (memory and disk).
  */
-public class ImageCache implements ImageLoader.ImageCache {
+public class ImageCache implements ImageLoader.ImageCache, PersistentCache {
     static final String TAG = "ImageCache";
 
     // Default memory cache size
     private static final int DEFAULT_MEM_CACHE_SIZE = 1024 * 1024 * 5; // 5MB
 
     // Default disk cache size
+//    private static final int DEFAULT_DISK_CACHE_SIZE = 1024 * 100; // 100k
     private static final int DEFAULT_DISK_CACHE_SIZE = 1024 * 1024 * 20; // 20MB
 
     // Compression settings when writing images to disk cache
@@ -167,6 +168,7 @@ public class ImageCache implements ImageLoader.ImageCache {
                             bitmap.compress(
                                     format, mCacheParams.compressQuality, out);
                             editor.commit();
+//                            Log.d("rodrigo", "bitmap:" + key + " added to disk");
                             out.close();
                         }
                     } else {
@@ -328,6 +330,63 @@ public class ImageCache implements ImageLoader.ImageCache {
         }
     }
 
+    @Override
+    public void setPersistent(String url) {
+        synchronized (mDiskCacheLock) {
+            try {
+                mDiskLruCache.setPersistent(getCacheKey(url, 0, 0));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public void setBrittle(String url) {
+        synchronized (mDiskCacheLock) {
+            try {
+                mDiskLruCache.setBrittle(getCacheKey(url, 0, 0));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private boolean isStorageWritable() {
+        return Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
+    }
+
+    /**
+     * A hashing method that changes a string (like a URL) into a hash suitable for using as a
+     * disk filename.
+     */
+    public static String hashKeyForDisk(String key) {
+        if (TextUtils.isEmpty(key))
+            return null;
+        String cacheKey;
+        try {
+            final MessageDigest mDigest = MessageDigest.getInstance("MD5");
+            mDigest.update(key.getBytes());
+            cacheKey = bytesToHexString(mDigest.digest());
+        } catch (NoSuchAlgorithmException e) {
+            cacheKey = String.valueOf(key.hashCode());
+        }
+        return cacheKey;
+    }
+
+    /**
+     * Creates a cache key for use with the L1 cache.
+     *
+     * @param url       The URL of the request.
+     * @param maxWidth  The max-width of the output.
+     * @param maxHeight The max-height of the output.
+     */
+    public String getCacheKey(String url, int maxWidth, int maxHeight) {
+        return hashKeyForDisk(url);
+//        return new StringBuilder(url.length()).append(url).append("#W").append(maxWidth)
+//                .append("#H").append(maxHeight).toString();
+    }
+
     /**
      * A holder class that contains cache parameters.
      */
@@ -348,6 +407,14 @@ public class ImageCache implements ImageLoader.ImageCache {
 
         public ImageCacheParams(File diskCacheDir) {
             this.diskCacheDir = diskCacheDir;
+        }
+
+        public void setDiskCacheSize(int diskCacheSize) {
+            if (diskCacheSize < 1024 * 1024) {
+                throw new IllegalArgumentException("setDiskCacheSize - disk cache size must be "
+                        + "bigger than 1MB");
+            }
+            this.diskCacheSize = diskCacheSize;
         }
 
         /**
@@ -401,22 +468,6 @@ public class ImageCache implements ImageLoader.ImageCache {
                 Environment.MEDIA_MOUNTED);
     }
 
-    /**
-     * A hashing method that changes a string (like a URL) into a hash suitable for using as a
-     * disk filename.
-     */
-    public static String hashKeyForDisk(String key) {
-        String cacheKey;
-        try {
-            final MessageDigest mDigest = MessageDigest.getInstance("MD5");
-            mDigest.update(key.getBytes());
-            cacheKey = bytesToHexString(mDigest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            cacheKey = String.valueOf(key.hashCode());
-        }
-        return cacheKey;
-    }
-
     private static String bytesToHexString(byte[] bytes) {
         // http://stackoverflow.com/questions/332079
         StringBuilder sb = new StringBuilder();
@@ -436,7 +487,7 @@ public class ImageCache implements ImageLoader.ImageCache {
      * @param bitmap
      * @return size in bytes
      */
-    @TargetApi(12)
+//    @TargetApi(12)
     public static int getBitmapSize(Bitmap bitmap) {
         if (OsVersionUtils.hasHoneycombMR1()) {
             return bitmap.getByteCount();
@@ -451,7 +502,7 @@ public class ImageCache implements ImageLoader.ImageCache {
      * @return True if external storage is removable (like an SD card), false
      *         otherwise.
      */
-    @TargetApi(9)
+//    @TargetApi(9)
     public static boolean isExternalStorageRemovable() {
         return !OsVersionUtils.hasGingerbread() || Environment.isExternalStorageRemovable();
     }
@@ -462,7 +513,7 @@ public class ImageCache implements ImageLoader.ImageCache {
      * @param context The context to use
      * @return The external cache dir
      */
-    @TargetApi(8)
+//    @TargetApi(8)
     public static File getExternalCacheDir(Context context) {
         if (OsVersionUtils.hasFroyo()) {
             File file = context.getExternalCacheDir();
@@ -481,7 +532,7 @@ public class ImageCache implements ImageLoader.ImageCache {
      * @param path The path to check
      * @return The space available in bytes
      */
-    @TargetApi(9)
+//    @TargetApi(9)
     public static long getUsableSpace(File path) {
         if (OsVersionUtils.hasGingerbread()) {
             return path.getUsableSpace();
@@ -489,66 +540,5 @@ public class ImageCache implements ImageLoader.ImageCache {
         final StatFs stats = new StatFs(path.getPath());
         return (long) stats.getBlockSize() * (long) stats.getAvailableBlocks();
     }
-
-//    /**
-//     * Locate an existing instance of this Fragment or if not found, create and
-//     * add it using FragmentManager.
-//     *
-//     * @param fm The FragmentManager manager to use.
-//     * @return The existing instance of the Fragment or the new instance if just
-//     *         created.
-//     */
-//    public static RetainFragment findOrCreateRetainFragment(FragmentManager fm) {
-//        // Check to see if we have retained the worker fragment.
-//        RetainFragment mRetainFragment = (RetainFragment) fm.findFragmentByTag(TAG);
-//
-//        // If not retained (or first time running), we need to create and add it.
-//        if (mRetainFragment == null) {
-//            mRetainFragment = new RetainFragment();
-//            fm.beginTransaction().add(mRetainFragment, TAG).commitAllowingStateLoss();
-//        }
-//
-//        return mRetainFragment;
-//    }
-//
-//    /**
-//     * A simple non-UI Fragment that stores a single Object and is retained over configuration
-//     * changes. It will be used to retain the ImageCache object.
-//     */
-//    public static class RetainFragment extends Fragment {
-//        private Object mObject;
-//
-//        /**
-//         * Empty constructor as per the Fragment documentation
-//         */
-//        public RetainFragment() {
-//        }
-//
-//        @Override
-//        public void onCreate(Bundle savedInstanceState) {
-//            super.onCreate(savedInstanceState);
-//
-//            // Make sure this Fragment is retained over a configuration change
-//            setRetainInstance(true);
-//        }
-//
-//        /**
-//         * Store a single object in this Fragment.
-//         *
-//         * @param object The object to store
-//         */
-//        public void setObject(Object object) {
-//            mObject = object;
-//        }
-//
-//        /**
-//         * Get the stored object.
-//         *
-//         * @return The stored object
-//         */
-//        public Object getObject() {
-//            return mObject;
-//        }
-//    }
 
 }
