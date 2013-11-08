@@ -51,3 +51,38 @@ Example to use ImageLoader:
         BookListRequest request = new BookListRequest(Request.Method.POST, DownloadParams.BOOK_LIST_URL, params, responseListener, errorListener);
         mQueue.add(request);
         mQueue.start();
+        
+       // BookListRequest Class:
+        
+        public class BookListRequest extends RequestPro<Result<ArrayList<NetBook>>> {
+        
+        public BookListRequest(int method, String url, Map<String,String> params, Response.Listener<Result<ArrayList<NetBook>>> listener, Response.ErrorListener errorListener) {
+          super(method, url, params, listener, errorListener);
+        }
+        
+      @Override
+       protected VolleyError parseNetworkError(VolleyError volleyError) {
+         if (volleyError.getMessage().equals("empty"))
+             return new EmptyError();
+         return super.parseNetworkError(volleyError);
+      }
+      @Override
+      protected Response<Result<ArrayList<NetBook>>> parseNetworkResponse(NetworkResponse response) {
+        try {
+            String jsonString =
+                    new String(response.data, HttpHeaderParser.parseCharset(response.headers));
+            Result<ArrayList<NetBook>> result = GsonUtil.fromJson(jsonString, new TypeToken<Result<ArrayList<NetBook>>>() {
+            }.getType());
+            if (result != null && result.getContent() != null) {
+                if (!result.getContent().isEmpty()) {
+                    return Response.success(result,
+                            HttpHeaderParser.parseCacheHeaders(response));
+                } else {
+                    return Response.error(parseNetworkError(new VolleyError("empty")));
+                }
+            } else return Response.error(parseNetworkError(new VolleyError("error")));
+        } catch (UnsupportedEncodingException e) {
+            return Response.error(new ParseError(e));
+        }
+      }
+    }
