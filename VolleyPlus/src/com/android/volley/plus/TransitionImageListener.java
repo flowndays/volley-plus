@@ -88,7 +88,7 @@ public class TransitionImageListener implements ImageLoader.ImageListener {
     public void onResponse(ImageLoader.ImageContainer response, boolean isImmediate) {
         if (response.getBitmap() != null) {
             transitBitmap(response.getBitmap());
-        } else if (defaultImageResId != 0) {
+        } else if (defaultImageResId != 0 && defaultImageResId != -1) {
             view.setImageResource(defaultImageResId);
         }
     }
@@ -101,7 +101,7 @@ public class TransitionImageListener implements ImageLoader.ImageListener {
                         new BitmapDrawable(view.getResources(), bitmap)
                 });
         // Set background to loading bitmap
-        if (defaultImageResId != 0) {
+        if (defaultImageResId != 0 && defaultImageResId != -1) {
             view.setImageResource(defaultImageResId);
         }
         view.setImageDrawable(td);
