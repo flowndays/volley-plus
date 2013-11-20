@@ -470,7 +470,7 @@ public class ImageLoader {
                 // If it is, add this request to the list of listeners.
                 Log.d(TAG, "not existed in disk, downloading, url:" + cacheKey);
                 request.addContainers(mContainers);
-            } else {
+            } else if (isValidRequest(requestUrl)) {
                 Log.d(TAG, "not existed in disk, start download, url:" + cacheKey);
                 // Check to see if a request is already in-flight.
                 request = mInFlightRequests.get(cacheKey);
@@ -504,7 +504,14 @@ public class ImageLoader {
 
                     mInFlightRequests.put(cacheKey, request);
                 }
+            } else {
+                onGetImageError(cacheKey, new VolleyError("bad url"));
+                BAD_URLS.add(requestUrl);
             }
+        }
+
+        private boolean isValidRequest(String requestUrl) {
+            return requestUrl.startsWith("http://") || requestUrl.startsWith("https://");
         }
 
         private void onLoadImageFinish(String cacheKey, Bitmap response) {

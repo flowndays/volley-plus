@@ -1,5 +1,6 @@
 package com.android.volley.plus;
 
+import android.text.TextUtils;
 import com.android.volley.AuthFailureError;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
@@ -80,7 +81,8 @@ public abstract class RequestPro<T> extends Request<T> {
      * <p/>
      * <p>Note that you can directly override {@link #getBody()} for custom data.</p>
      *
-     * @throws com.android.volley.AuthFailureError in the event of auth failure
+     * @throws com.android.volley.AuthFailureError
+     *          in the event of auth failure
      */
     @Override
     protected Map<String, String> getParams() throws AuthFailureError {
@@ -103,7 +105,8 @@ public abstract class RequestPro<T> extends Request<T> {
     /**
      * Returns the raw POST or PUT body to be sent.
      *
-     * @throws com.android.volley.AuthFailureError in the event of auth failure
+     * @throws com.android.volley.AuthFailureError
+     *          in the event of auth failure
      */
     @Override
     public byte[] getBody() throws AuthFailureError {
@@ -123,6 +126,8 @@ public abstract class RequestPro<T> extends Request<T> {
         StringBuilder encodedParams = new StringBuilder();
         try {
             for (Map.Entry<String, String> entry : params.entrySet()) {
+                if (TextUtils.isEmpty(entry.getKey()) || TextUtils.isEmpty(entry.getValue()))
+                    continue;
                 encodedParams.append(URLEncoder.encode(entry.getKey(), paramsEncoding));
                 encodedParams.append('=');
                 encodedParams.append(URLEncoder.encode(entry.getValue(), paramsEncoding));
