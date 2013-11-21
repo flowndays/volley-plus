@@ -330,6 +330,13 @@ public class ImageCache implements ImageLoader.ImageCache, PersistentCache {
         }
     }
 
+    /**
+     * set a cache item to be persistent. Persistent cache items will not be removed when trimming, and their size is excluded in total size of disk cache.
+     * Remember call setBrittle if an item needs no longer to be kept.
+     * works only when disk cache is enabled(cacheParams.initDiskCacheOnCreate == true).
+     *
+     * @param url
+     */
     @Override
     public void setPersistent(String url) {
         synchronized (mDiskCacheLock) {
@@ -343,6 +350,12 @@ public class ImageCache implements ImageLoader.ImageCache, PersistentCache {
         }
     }
 
+    /**
+     * set a cache item to be brittle, no longer persistent.
+     * works only when disk cache is enabled(cacheParams.initDiskCacheOnCreate == true).
+     *
+     * @param url
+     */
     @Override
     public void setBrittle(String url) {
         synchronized (mDiskCacheLock) {
