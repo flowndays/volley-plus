@@ -333,10 +333,12 @@ public class ImageCache implements ImageLoader.ImageCache, PersistentCache {
     @Override
     public void setPersistent(String url) {
         synchronized (mDiskCacheLock) {
-            try {
-                mDiskLruCache.setPersistent(getCacheKey(url, 0, 0));
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (mDiskLruCache != null) {
+                try {
+                    mDiskLruCache.setPersistent(getCacheKey(url, 0, 0));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -344,10 +346,12 @@ public class ImageCache implements ImageLoader.ImageCache, PersistentCache {
     @Override
     public void setBrittle(String url) {
         synchronized (mDiskCacheLock) {
-            try {
-                mDiskLruCache.setBrittle(getCacheKey(url, 0, 0));
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (mDiskLruCache != null) {
+                try {
+                    mDiskLruCache.setBrittle(getCacheKey(url, 0, 0));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
