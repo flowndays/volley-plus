@@ -29,6 +29,11 @@ Changes from trunk of volley:
  * 4    The method getEncodedParameters can be used by sub classes.
 see Example to use RequestPro for detail.
 
+6 Record image download failers to avoid unnecessory redownloads.
+
+7 Change class BasicNetwork, to support getting streams from sd card, not only from network. Use format:"file://sdcard..." to get them.
+
+
 Example to use ImageLoader:
 
         mQueue = Volley.newRequestQueue(context);
