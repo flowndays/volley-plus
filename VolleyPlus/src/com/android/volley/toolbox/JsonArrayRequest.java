@@ -21,14 +21,13 @@ import com.android.volley.ParseError;
 import com.android.volley.Response;
 import com.android.volley.Response.ErrorListener;
 import com.android.volley.Response.Listener;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.UnsupportedEncodingException;
 
 /**
- * A request for retrieving a {@link JSONArray} response body at a given URL.
+ * A request for retrieving a {@link org.json.JSONArray} response body at a given URL.
  */
 public class JsonArrayRequest extends JsonRequest<JSONArray> {
 

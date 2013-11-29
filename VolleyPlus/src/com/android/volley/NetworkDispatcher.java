@@ -26,9 +26,9 @@ import java.util.concurrent.BlockingQueue;
  * Provides a thread for performing network dispatch from a queue of requests.
  *
  * Requests added to the specified queue are processed from the network via a
- * specified {@link Network} interface. Responses are committed to cache, if
- * eligible, using a specified {@link Cache} interface. Valid responses and
- * errors are posted back to the caller via a {@link ResponseDelivery}.
+ * specified {@link com.android.volley.Network} interface. Responses are committed to cache, if
+ * eligible, using a specified {@link com.android.volley.Cache} interface. Valid responses and
+ * errors are posted back to the caller via a {@link com.android.volley.ResponseDelivery}.
  */
 @SuppressWarnings("rawtypes")
 public class NetworkDispatcher extends Thread {

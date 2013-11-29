@@ -23,8 +23,8 @@ public interface Network {
     /**
      * Performs the specified request.
      * @param request Request to process
-     * @return A {@link NetworkResponse} with data and caching metadata; will never be null
-     * @throws VolleyError on errors
+     * @return A {@link com.android.volley.NetworkResponse} with data and caching metadata; will never be null
+     * @throws com.android.volley.VolleyError on errors
      */
     public NetworkResponse performRequest(Request<?> request) throws VolleyError;
 }

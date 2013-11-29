@@ -201,12 +201,12 @@ public class ImageCache implements ImageLoader.ImageCache, PersistentCache {
     /**
      * Get from memory cache.
      *
-     * @param data Unique identifier for which item to get
+     * @param url Unique identifier for which item to get
      * @return The bitmap if found in cache, null otherwise
      */
-    public Bitmap getBitmapFromMemCache(String data) {
-        if (mMemoryCache != null) {
-            final Bitmap memBitmap = mMemoryCache.get(data);
+    public Bitmap getBitmapFromMemCache(String url) {
+        if (mMemoryCache != null && url != null && !url.equals("")) {
+            final Bitmap memBitmap = mMemoryCache.get(getCacheKey(url));
             if (memBitmap != null) {
 //                if (BuildConfig.DEBUG) {
 //                    Log.d(TAG, "Memory cache hit");
@@ -342,7 +342,7 @@ public class ImageCache implements ImageLoader.ImageCache, PersistentCache {
         synchronized (mDiskCacheLock) {
             if (mDiskLruCache != null) {
                 try {
-                    mDiskLruCache.setPersistent(getCacheKey(url, 0, 0));
+                    mDiskLruCache.setPersistent(getCacheKey(url));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -361,7 +361,7 @@ public class ImageCache implements ImageLoader.ImageCache, PersistentCache {
         synchronized (mDiskCacheLock) {
             if (mDiskLruCache != null) {
                 try {
-                    mDiskLruCache.setBrittle(getCacheKey(url, 0, 0));
+                    mDiskLruCache.setBrittle(getCacheKey(url));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -394,11 +394,9 @@ public class ImageCache implements ImageLoader.ImageCache, PersistentCache {
     /**
      * Creates a cache key for use with the L1 cache.
      *
-     * @param url       The URL of the request.
-     * @param maxWidth  The max-width of the output.
-     * @param maxHeight The max-height of the output.
+     * @param url The URL of the request.
      */
-    public String getCacheKey(String url, int maxWidth, int maxHeight) {
+    public String getCacheKey(String url) {
         return hashKeyForDisk(url);
 //        return new StringBuilder(url.length()).append(url).append("#W").append(maxWidth)
 //                .append("#H").append(maxHeight).toString();

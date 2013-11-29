@@ -25,9 +25,9 @@ import java.util.concurrent.BlockingQueue;
  *
  * Requests added to the specified cache queue are resolved from cache.
  * Any deliverable response is posted back to the caller via a
- * {@link ResponseDelivery}.  Cache misses and responses that require
+ * {@link com.android.volley.ResponseDelivery}.  Cache misses and responses that require
  * refresh are enqueued on the specified network queue for processing
- * by a {@link NetworkDispatcher}.
+ * by a {@link com.android.volley.NetworkDispatcher}.
  */
 @SuppressWarnings("rawtypes")
 public class CacheDispatcher extends Thread {

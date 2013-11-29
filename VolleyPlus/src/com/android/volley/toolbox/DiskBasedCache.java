@@ -17,23 +17,11 @@
 package com.android.volley.toolbox;
 
 import android.os.SystemClock;
-
 import com.android.volley.Cache;
 import com.android.volley.VolleyLog;
 
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FilterInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 
 /**
  * Cache implementation that caches files directly onto the hard disk in the specified
@@ -372,7 +360,7 @@ public class DiskBasedCache implements Cache {
         /**
          * Reads the header off of an InputStream and returns a CacheHeader object.
          * @param is The InputStream to read from.
-         * @throws IOException
+         * @throws java.io.IOException
          */
         public static CacheHeader readHeader(InputStream is) throws IOException {
             CacheHeader entry = new CacheHeader();
@@ -464,7 +452,7 @@ public class DiskBasedCache implements Cache {
      */
 
     /**
-     * Simple wrapper around {@link InputStream#read()} that throws EOFException
+     * Simple wrapper around {@link java.io.InputStream#read()} that throws EOFException
      * instead of returning -1.
      */
     private static int read(InputStream is) throws IOException {

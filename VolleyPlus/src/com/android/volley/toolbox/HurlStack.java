@@ -19,17 +19,14 @@ package com.android.volley.toolbox;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.Request.Method;
-
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.ProtocolVersion;
-import org.apache.http.StatusLine;
+import org.apache.http.*;
 import org.apache.http.entity.BasicHttpEntity;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicHttpResponse;
 import org.apache.http.message.BasicStatusLine;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,11 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
-
 /**
- * An {@link HttpStack} based on {@link HttpURLConnection}.
+ * An {@link com.android.volley.toolbox.HttpStack} based on {@link java.net.HttpURLConnection}.
  */
 public class HurlStack implements HttpStack {
 
@@ -126,7 +120,7 @@ public class HurlStack implements HttpStack {
     }
 
     /**
-     * Initializes an {@link HttpEntity} from the given {@link HttpURLConnection}.
+     * Initializes an {@link org.apache.http.HttpEntity} from the given {@link java.net.HttpURLConnection}.
      * @param connection
      * @return an HttpEntity populated with data from <code>connection</code>.
      */
@@ -146,17 +140,17 @@ public class HurlStack implements HttpStack {
     }
 
     /**
-     * Create an {@link HttpURLConnection} for the specified {@code url}.
+     * Create an {@link java.net.HttpURLConnection} for the specified {@code url}.
      */
     protected HttpURLConnection createConnection(URL url) throws IOException {
         return (HttpURLConnection) url.openConnection();
     }
 
     /**
-     * Opens an {@link HttpURLConnection} with parameters.
+     * Opens an {@link java.net.HttpURLConnection} with parameters.
      * @param url
      * @return an open connection
-     * @throws IOException
+     * @throws java.io.IOException
      */
     private HttpURLConnection openConnection(URL url, Request<?> request) throws IOException {
         HttpURLConnection connection = createConnection(url);

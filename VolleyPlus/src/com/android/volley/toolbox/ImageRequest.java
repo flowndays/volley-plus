@@ -16,16 +16,10 @@
 
 package com.android.volley.toolbox;
 
-import com.android.volley.DefaultRetryPolicy;
-import com.android.volley.NetworkResponse;
-import com.android.volley.ParseError;
-import com.android.volley.Request;
-import com.android.volley.Response;
-import com.android.volley.VolleyLog;
-
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.BitmapFactory;
+import com.android.volley.*;
 
 /**
  * A canned request for getting an image at a given URL and calling

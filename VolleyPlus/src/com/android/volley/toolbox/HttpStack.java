@@ -18,7 +18,6 @@ package com.android.volley.toolbox;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
-
 import org.apache.http.HttpResponse;
 
 import java.io.IOException;
@@ -36,7 +35,7 @@ public interface HttpStack {
      *
      * @param request the request to perform
      * @param additionalHeaders additional headers to be sent together with
-     *         {@link Request#getHeaders()}
+     *         {@link com.android.volley.Request#getHeaders()}
      * @return the HTTP response
      */
     public HttpResponse performRequest(Request<?> request, Map<String, String> additionalHeaders)

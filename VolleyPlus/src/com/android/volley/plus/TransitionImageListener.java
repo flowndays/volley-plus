@@ -87,10 +87,19 @@ public class TransitionImageListener implements ImageLoader.ImageListener {
     @Override
     public void onResponse(ImageLoader.ImageContainer response, boolean isImmediate) {
         if (response.getBitmap() != null) {
-            transitBitmap(response.getBitmap());
+            if (isImmediate) {
+                showNow(response.getBitmap());
+            } else {
+                transitBitmap(response.getBitmap());
+            }
+            recycle();
         } else if (defaultImageResId != 0 && defaultImageResId != -1) {
             view.setImageResource(defaultImageResId);
         }
+    }
+
+    private void showNow(Bitmap bitmap) {
+        view.setImageBitmap(bitmap);
     }
 
     private void transitBitmap(Bitmap bitmap) {
@@ -103,9 +112,10 @@ public class TransitionImageListener implements ImageLoader.ImageListener {
         // Set background to loading bitmap
         if (defaultImageResId != 0 && defaultImageResId != -1) {
             view.setImageResource(defaultImageResId);
+        } else {
+            view.setImageDrawable(new ColorDrawable(0xffffffff));//没有的话用白色作为默认图
         }
         view.setImageDrawable(td);
         td.startTransition(FADE_IN_TIME);
-        recycle();
     }
 }

@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * Data and headers returned from {@link Network#performRequest(Request)}.
+ * Data and headers returned from {@link com.android.volley.Network#performRequest(com.android.volley.Request)}.
  */
 public class NetworkResponse {
     /**

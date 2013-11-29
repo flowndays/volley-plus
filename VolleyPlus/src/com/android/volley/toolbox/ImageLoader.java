@@ -98,7 +98,7 @@ public class ImageLoader {
         /**
          * called in main thread, so it should not block.
          */
-        public Bitmap getBitmapFromMemCache(String key);
+        public Bitmap getBitmapFromMemCache(String url);
 
         /**
          * called in back-ground thread.
@@ -115,7 +115,7 @@ public class ImageLoader {
          */
         public void addBitmapToMemCache(String key, Bitmap bitmap);
 
-        public String getCacheKey(String url, int maxWidth, int maxHeight);
+        public String getCacheKey(String url);
     }
 
     /**
@@ -190,15 +190,12 @@ public class ImageLoader {
      * Checks if the item is available in the memory cache.
      *
      * @param requestUrl The url of the remote image
-     * @param maxWidth   The maximum width of the returned image.
-     * @param maxHeight  The maximum height of the returned image.
      * @return True if the item exists in cache, false otherwise.
      */
-    public boolean isMemCached(String requestUrl, int maxWidth, int maxHeight) {
+    public boolean isMemCached(String requestUrl) {
         throwIfNotOnMainThread();
 
-        String cacheKey = mCache.getCacheKey(requestUrl, maxWidth, maxHeight);
-        return mCache.getBitmapFromMemCache(cacheKey) != null;
+        return mCache.getBitmapFromMemCache(requestUrl) != null;
     }
 
     /**
@@ -230,8 +227,10 @@ public class ImageLoader {
      */
     public ImageContainer get(String requestUrl, ImageListener imageListener,
                               int maxWidth, int maxHeight) {
-        if (TextUtils.isEmpty(requestUrl))
+        if (TextUtils.isEmpty(requestUrl)) {
+            imageListener.onErrorResponse(new VolleyError("empty_url"));
             return null;
+        }
         // only fulfill requests that were initiated from the main thread.
         throwIfNotOnMainThread();
 
@@ -240,17 +239,16 @@ public class ImageLoader {
             return null;
         }
 
-        final String cacheKey = mCache.getCacheKey(requestUrl, maxWidth, maxHeight);
+        final String cacheKey = mCache.getCacheKey(requestUrl);
 
         // Try to look up the request in the cache of remote images.
-        Bitmap cachedBitmap = mCache.getBitmapFromMemCache(cacheKey);
+        Bitmap cachedBitmap = mCache.getBitmapFromMemCache(requestUrl);
         if (cachedBitmap != null) {
             // Return the cached bitmap.
             ImageContainer container = new ImageContainer(cachedBitmap, requestUrl, null, null);
             imageListener.onResponse(container, true);
             return container;
         }
-
         // The bitmap did not exist in the cache, fetch it!
         ImageContainer imageContainer =
                 new ImageContainer(null, requestUrl, cacheKey, imageListener);
@@ -259,18 +257,31 @@ public class ImageLoader {
         imageListener.onResponse(imageContainer, true);
 
         // If loading Task is on fly, just add container.
-        LoadFromDiskTask loadFromDiskTask = mInFlightLoaders.get(cacheKey);
-        if (loadFromDiskTask != null && !loadFromDiskTask.isCancelled()) {
-            loadFromDiskTask.addContainer(imageContainer);
-            return imageContainer;
+        synchronized (mInFlightLoaders) {
+            LoadFromDiskTask loadFromDiskTask = mInFlightLoaders.get(cacheKey);
+            if (loadFromDiskTask != null && !loadFromDiskTask.isCancelled()) {
+                Log.d(TAG, "loading from disk:" + requestUrl);
+                loadFromDiskTask.addContainer(imageContainer);
+                return imageContainer;
+            } else {
+                synchronized (mInFlightRequests) {
+                    BatchedImageRequest request = mInFlightRequests.get(cacheKey);
+                    if (request != null) {
+                        // If it is, add this request to the list of listeners.
+                        request.addContainer(imageContainer);
+                    } else {
+                        Log.d(TAG, "not existed in disk, start download, url:" + requestUrl);
+
+                        // Start a load task from disk cache.
+                        loadFromDiskTask = new LoadFromDiskTask(cacheKey, requestUrl, maxWidth, maxHeight, imageContainer);
+                        mInFlightLoaders.put(cacheKey, loadFromDiskTask);
+
+                        loadFromDiskTask.execute();
+                    }
+                }
+
+            }
         }
-
-        // Start a load task from disk cache.
-        loadFromDiskTask = new LoadFromDiskTask(cacheKey, requestUrl, maxWidth, maxHeight, imageContainer);
-        mInFlightLoaders.put(cacheKey, loadFromDiskTask);
-
-        loadFromDiskTask.execute();
-
         return imageContainer;
     }
 
@@ -338,7 +349,7 @@ public class ImageLoader {
          */
         private Bitmap mBitmap;
 
-        private final ImageListener mListener;
+        private ImageListener mListener;
 
         /**
          * The cache key that was associated with the request
@@ -365,6 +376,10 @@ public class ImageLoader {
             mListener = listener;
         }
 
+        public void deleteListener() {
+            mListener = null;
+        }
+
         /**
          * Releases interest in the in-flight request (and cancels it if no one else is listening).
          */
@@ -372,27 +387,29 @@ public class ImageLoader {
             if (mListener == null) {
                 return;
             }
-
-            LoadFromDiskTask loadTask = mInFlightLoaders.get(mCacheKey);
-            if (loadTask != null) {
-                if (loadTask.cancel(true)) {
-                    mInFlightLoaders.remove(mCacheKey);
+            synchronized (mInFlightRequests) {
+                LoadFromDiskTask loadTask = mInFlightLoaders.get(mCacheKey);
+                if (loadTask != null) {
+                    if (loadTask.cancel(true)) {
+                        mInFlightLoaders.remove(mCacheKey);
+                    }
                 }
             }
-
-            BatchedImageRequest request = mInFlightRequests.get(mCacheKey);
-            if (request != null) {
-                boolean canceled = request.removeContainerAndCancelIfNecessary(this);
-                if (canceled) {
-                    mInFlightRequests.remove(mCacheKey);
-                }
-            } else {
-                // check to see if it is already batched for delivery.
-                request = mBatchedResponses.get(mCacheKey);
+            synchronized (mInFlightRequests) {
+                BatchedImageRequest request = mInFlightRequests.get(mCacheKey);
                 if (request != null) {
-                    request.removeContainerAndCancelIfNecessary(this);
-                    if (request.mContainers.size() == 0) {
-                        mBatchedResponses.remove(mCacheKey);
+                    boolean canceled = request.removeContainerAndCancelIfNecessary(this);
+                    if (canceled) {
+                        mInFlightRequests.remove(mCacheKey);
+                    }
+                } else {
+                    // check to see if it is already batched for delivery.
+                    request = mBatchedResponses.get(mCacheKey);
+                    if (request != null) {
+                        request.removeContainerAndCancelIfNecessary(this);
+                        if (request.mContainers.size() == 0) {
+                            mBatchedResponses.remove(mCacheKey);
+                        }
                     }
                 }
             }
@@ -445,7 +462,9 @@ public class ImageLoader {
                 tryAddRequest();
             }
 
-            onLoadImageFinish(cacheKey, bitmap);
+            synchronized (mInFlightRequests) {
+                onLoadImageFinish(cacheKey, bitmap);
+            }
             super.onPostExecute(bitmap);
         }
 
@@ -456,60 +475,56 @@ public class ImageLoader {
                 }
                 container.mBitmap = bitmap;
 
-                Log.d(TAG, "get bitmap from disk, url:" + cacheKey);
+                Log.d(TAG, "get bitmap from disk, url:" + requestUrl);
                 container.mListener.onResponse(container, false);
             }
         }
 
         private void tryAddRequest() {
             // Check to see if a request is already in-flight.
-            BatchedImageRequest request = mInFlightRequests.get(cacheKey);
-            if (request != null) {
-                // If it is, add this request to the list of listeners.
-                Log.d(TAG, "not existed in disk, downloading, url:" + cacheKey);
-                request.addContainers(mContainers);
-            } else if (isValidRequest(requestUrl)) {
-                Log.d(TAG, "not existed in disk, start download, url:" + cacheKey);
-                // Check to see if a request is already in-flight.
-                request = mInFlightRequests.get(cacheKey);
+            synchronized (mInFlightRequests) {
+                BatchedImageRequest request = mInFlightRequests.get(cacheKey);
                 if (request != null) {
                     // If it is, add this request to the list of listeners.
-                    for (ImageContainer container : mContainers) {
-                        request.addContainer(container);
-                    }
+                    Log.d(TAG, "not existed in disk, downloading, url:" + requestUrl);
+                    request.addContainers(mContainers);
                 } else {
-                    // The request is not already in flight. Send the new request to the network and
-                    // track it.
-                    Request<?> newRequest =
-                            new ImageRequest(requestUrl, new Listener<Bitmap>() {
-                                @Override
-                                public void onResponse(Bitmap response) {
-                                    onGetImageSuccess(cacheKey, response);
+                    Log.d(TAG, "not existed in disk, start download, url:" + requestUrl);
+                    // Check to see if a request is already in-flight.
+                    request = mInFlightRequests.get(cacheKey);
+                    if (request != null) {
+                        // If it is, add this request to the list of listeners.
+                        for (ImageContainer container : mContainers) {
+                            request.addContainer(container);
+                        }
+                    } else {
+                        // The request is not already in flight. Send the new request to the network and
+                        // track it.
+                        Request<?> newRequest =
+                                new ImageRequest(requestUrl, new Listener<Bitmap>() {
+                                    @Override
+                                    public void onResponse(Bitmap response) {
+                                        onGetImageSuccess(cacheKey, response);
+                                    }
+                                }, maxWidth, maxHeight,
+                                        Config.RGB_565, new ErrorListener() {
+                                    @Override
+                                    public void onErrorResponse(VolleyError error) {
+                                        onGetImageError(cacheKey, error);
+                                        BAD_URLS.add(requestUrl);
+                                    }
                                 }
-                            }, maxWidth, maxHeight,
-                                    Config.RGB_565, new ErrorListener() {
-                                @Override
-                                public void onErrorResponse(VolleyError error) {
-                                    onGetImageError(cacheKey, error);
-                                    BAD_URLS.add(requestUrl);
-                                }
-                            }
-                            );
+                                );
+                        newRequest.setShouldCache(false);
 
-                    mRequestQueue.add(newRequest);
+                        mRequestQueue.add(newRequest);
 
-                    request = new BatchedImageRequest(newRequest, mContainers);
+                        request = new BatchedImageRequest(newRequest, mContainers);
 
-                    mInFlightRequests.put(cacheKey, request);
+                        mInFlightRequests.put(cacheKey, request);
+                    }
                 }
-            } else {
-                onGetImageError(cacheKey, new VolleyError("bad url"));
-                BAD_URLS.add(requestUrl);
             }
-        }
-
-        private boolean isValidRequest(String requestUrl) {
-            return requestUrl.startsWith("http://") || requestUrl.startsWith("https://");
         }
 
         private void onLoadImageFinish(String cacheKey, Bitmap response) {

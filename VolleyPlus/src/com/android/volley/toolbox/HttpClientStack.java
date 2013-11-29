@@ -19,17 +19,11 @@ package com.android.volley.toolbox;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.Request.Method;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.*;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.HttpConnectionParams;
@@ -41,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * An HttpStack that performs request over an {@link HttpClient}.
+ * An HttpStack that performs request over an {@link org.apache.http.client.HttpClient}.
  */
 public class HttpClientStack implements HttpStack {
     protected final HttpClient mClient;
