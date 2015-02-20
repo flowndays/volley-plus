@@ -1,0 +1,48 @@
+# exclude android sdk compile target files
+bin/
+target/
+bin-test/
+build/
+
+# exclude auto-generated folder
+gen/
+gen-external-apklibs/
+
+#exlude tmp dir
+tmp/
+
+# Exclude crashlytics automatically generated identifiers
+com_crashlytics_export_strings.xml
+
+#built application files
+*.apk
+*.ap_
+
+# files for the dex VM
+*.dex
+
+# Java class files
+*.class
+
+# Windows thumbnail db
+Thumbs.db
+
+# OSX files
+.DS_Store
+
+# Ignore robolectric unit test configuration
+*.launch
+.amateras
+*/.settings/*.launch
+
+# Android Studio
+.idea
+#.idea/workspace.xml - remove # and delete .idea if it better suit your needs.
+.gradle/
+build/
+*.iml
+
+# Local
+local.properties
+crashlytics.properties
+crashlytics-build.properties
